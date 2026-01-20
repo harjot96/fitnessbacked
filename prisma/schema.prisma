@@ -1,0 +1,397 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  displayName         String
+  photoURL            String             @default("")
+  usernameLower       String?
+  passwordHash        String
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  lastActiveAt        DateTime           @default(now())
+  blockedBy           BlockedUser[]      @relation("Blocked")
+  blockedUsers        BlockedUser[]      @relation("Blocker")
+  sentClanInvites     ClanInvite[]       @relation("SentClanInvites")
+  receivedClanInvites ClanInvite[]       @relation("ReceivedClanInvites")
+  clanMembers         ClanMember[]
+  ownedClans          Clan[]             @relation("ClanOwner")
+  dailyHealthData     DailyHealthData[]
+  sentRequests        FriendRequest[]    @relation("SentRequests")
+  receivedRequests    FriendRequest[]    @relation("ReceivedRequests")
+  friendOf            Friend[]           @relation("FriendOf")
+  friends             Friend[]           @relation("UserFriends")
+  meal_suggestions    meal_suggestions[]
+  notifications       Notification[]
+  refresh_tokens      refresh_tokens[]
+  ringStats           RingStats[]
+  privacy             UserPrivacy?
+  profile             UserProfile?
+  basketItems         BasketItem[]
+
+  @@index([email])
+  @@index([usernameLower])
+  @@map("users")
+}
+
+model UserProfile {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  age           Int?
+  weight        Float?
+  height        Float?
+  activityLevel String?
+  gender        String?
+  waterGoal     Int?     @default(8) // Daily water intake goal in glasses (minimum 8)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_profiles")
+}
+
+model UserPrivacy {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  ringsVisibility     String   @default("friends")
+  allowFriendRequests Boolean  @default(true)
+  allowClanInvites    Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_privacy")
+}
+
+model DailyHealthData {
+  id                    String          @id @default(uuid())
+  userId                String
+  date                  String
+  caloriesConsumed      Float           @default(0)
+  caloriesBurned        Float           @default(0)
+  activeEnergyBurned    Float?
+  dietaryEnergyConsumed Float?
+  heartRate             Int?
+  restingHeartRate      Int?
+  steps                 Int             @default(0)
+  waterIntake           Float           @default(0)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fastingSession        FastingSession?
+  meals                 Meal[]
+  waterEntries          WaterEntry[]
+  workouts              Workout[]
+
+  @@unique([userId, date], name: "userId_date")
+  @@index([userId, date])
+  @@map("daily_health_data")
+}
+
+model Meal {
+  id                String          @id @default(uuid())
+  dailyHealthDataId String
+  type              String
+  name              String
+  calories          Float           @default(0)
+  carbs             Float           @default(0)
+  protein           Float           @default(0)
+  fat               Float           @default(0)
+  timestamp         DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  dailyHealthData   DailyHealthData @relation(fields: [dailyHealthDataId], references: [id], onDelete: Cascade)
+
+  @@index([dailyHealthDataId])
+  @@map("meals")
+}
+
+model WaterEntry {
+  id                String          @id @default(uuid())
+  dailyHealthDataId String
+  glasses           Float
+  timestamp         DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+  dailyHealthData   DailyHealthData @relation(fields: [dailyHealthDataId], references: [id], onDelete: Cascade)
+
+  @@index([dailyHealthDataId])
+  @@map("water_entries")
+}
+
+model Workout {
+  id                  String          @id @default(uuid())
+  dailyHealthDataId   String
+  name                String
+  type                String
+  startTime           DateTime
+  endTime             DateTime?
+  duration            Int             @default(0)
+  totalCaloriesBurned Float           @default(0)
+  distance            Float?
+  averageSpeed        Float?
+  maxSpeed            Float?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  exercises           Exercise[]
+  locationPoints      LocationPoint[]
+  dailyHealthData     DailyHealthData @relation(fields: [dailyHealthDataId], references: [id], onDelete: Cascade)
+
+  @@index([dailyHealthDataId])
+  @@map("workouts")
+}
+
+model Exercise {
+  id             String   @id @default(uuid())
+  workoutId      String
+  name           String
+  category       String
+  duration       Int?
+  sets           Int?
+  reps           Int?
+  weight         Float?
+  caloriesBurned Float?
+  notes          String?
+  createdAt      DateTime @default(now())
+  workout        Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId])
+  @@map("exercises")
+}
+
+model LocationPoint {
+  id        String   @id @default(uuid())
+  workoutId String
+  latitude  Float
+  longitude Float
+  timestamp DateTime
+  altitude  Float?
+  speed     Float?
+  accuracy  Float?
+  createdAt DateTime @default(now())
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+
+  @@index([workoutId])
+  @@map("location_points")
+}
+
+model FastingSession {
+  id                String          @id @default(uuid())
+  dailyHealthDataId String          @unique
+  type              String
+  startTime         DateTime
+  endTime           DateTime?
+  duration          Int             @default(0)
+  targetDuration    Int?
+  eatingWindowStart Int?
+  eatingWindowEnd   Int?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  dailyHealthData   DailyHealthData @relation(fields: [dailyHealthDataId], references: [id], onDelete: Cascade)
+
+  @@map("fasting_sessions")
+}
+
+model FriendRequest {
+  id        String   @id @default(uuid())
+  fromUid   String
+  toUid     String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  fromUser  User     @relation("SentRequests", fields: [fromUid], references: [id], onDelete: Cascade)
+  toUser    User     @relation("ReceivedRequests", fields: [toUid], references: [id], onDelete: Cascade)
+
+  @@unique([fromUid, toUid])
+  @@index([fromUid])
+  @@index([toUid])
+  @@map("friend_requests")
+}
+
+model Friend {
+  id         String   @id @default(uuid())
+  userId     String
+  friendUid  String
+  ringsShare Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  friend     User     @relation("FriendOf", fields: [friendUid], references: [id], onDelete: Cascade)
+  user       User     @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendUid])
+  @@index([userId])
+  @@index([friendUid])
+  @@map("friends")
+}
+
+model Clan {
+  id          String       @id @default(uuid())
+  name        String
+  description String       @default("")
+  photoURL    String       @default("")
+  ownerUid    String
+  privacy     String       @default("inviteOnly")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  invites     ClanInvite[]
+  members     ClanMember[]
+  owner       User         @relation("ClanOwner", fields: [ownerUid], references: [id], onDelete: Cascade)
+
+  @@index([ownerUid])
+  @@map("clans")
+}
+
+model ClanMember {
+  id       String   @id @default(uuid())
+  clanId   String
+  uid      String
+  role     String   @default("member")
+  status   String   @default("active")
+  joinedAt DateTime @default(now())
+  clan     Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [uid], references: [id], onDelete: Cascade)
+
+  @@unique([clanId, uid])
+  @@index([clanId])
+  @@index([uid])
+  @@map("clan_members")
+}
+
+model ClanInvite {
+  id        String   @id @default(uuid())
+  clanId    String
+  fromUid   String
+  toUid     String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clan      Clan     @relation(fields: [clanId], references: [id], onDelete: Cascade)
+  fromUser  User     @relation("SentClanInvites", fields: [fromUid], references: [id], onDelete: Cascade)
+  toUser    User     @relation("ReceivedClanInvites", fields: [toUid], references: [id], onDelete: Cascade)
+
+  @@unique([clanId, toUid])
+  @@index([clanId])
+  @@index([fromUid])
+  @@index([toUid])
+  @@map("clan_invites")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      String   @default("{}")
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model BlockedUser {
+  id         String   @id @default(uuid())
+  blockerUid String
+  blockedUid String
+  blockedAt  DateTime @default(now())
+  blocked    User     @relation("Blocked", fields: [blockedUid], references: [id], onDelete: Cascade)
+  blocker    User     @relation("Blocker", fields: [blockerUid], references: [id], onDelete: Cascade)
+
+  @@unique([blockerUid, blockedUid])
+  @@index([blockerUid])
+  @@index([blockedUid])
+  @@map("blocked_users")
+}
+
+model RingStats {
+  id             String   @id @default(uuid())
+  userId         String
+  date           String
+  caloriesBurned Float    @default(0)
+  steps          Int      @default(0)
+  workoutMinutes Int      @default(0)
+  goalCalories   Float    @default(0)
+  goalSteps      Int      @default(0)
+  goalMinutes    Int      @default(0)
+  updatedAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("ring_stats")
+}
+
+model meal_suggestions {
+  id        String   @id
+  userId    String
+  type      String
+  name      String
+  calories  Float    @default(0)
+  carbs     Float    @default(0)
+  protein   Float    @default(0)
+  fat       Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  users     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+}
+
+model refresh_tokens {
+  id        String   @id
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  users     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+}
+
+model FoodItem {
+  id          String       @id @default(uuid())
+  name        String
+  description String?
+  imageUrl    String?
+  calories    Float        @default(0)
+  carbs       Float        @default(0)
+  protein     Float        @default(0)
+  fat         Float        @default(0)
+  servingSize Float        @default(100)
+  servingUnit String       @default("g")
+  category    String?
+  source      String       @default("user-added")
+  sourceUrl   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  basketItems BasketItem[]
+
+  @@index([name])
+  @@index([category])
+  @@index([source])
+  @@map("food_items")
+}
+
+model BasketItem {
+  id          String   @id @default(uuid())
+  userId      String
+  foodItemId  String
+  quantity    Float    @default(1)
+  servingSize Float    @default(100)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodItem    FoodItem @relation(fields: [foodItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, foodItemId])
+  @@index([userId])
+  @@index([foodItemId])
+  @@map("basket_items")
+}
