@@ -1,9 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
 import { sendError } from '../utils/response.helper';
 
-export interface AppError extends Error {
-  statusCode?: number;
+export class AppError extends Error {
+  statusCode: number;
   code?: string;
+
+  constructor(message: string, statusCode: number = 500, code?: string) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
 export function errorHandler(
@@ -24,16 +31,4 @@ export function errorHandler(
 
 export function notFoundHandler(req: Request, res: Response, next: NextFunction): void {
   sendError(res, `Route ${req.originalUrl} not found`, 404, 'NOT_FOUND');
-}
-
-export class AppError extends Error {
-  statusCode: number;
-  code?: string;
-
-  constructor(message: string, statusCode: number = 500, code?: string) {
-    super(message);
-    this.statusCode = statusCode;
-    this.code = code;
-    Error.captureStackTrace(this, this.constructor);
-  }
 }

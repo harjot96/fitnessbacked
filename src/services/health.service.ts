@@ -129,7 +129,7 @@ export class HealthService {
             where: { id: d.fastingSession!.id },
             data: {
               endTime: now,
-              duration: d.fastingSession!.targetDuration, // Cap at target duration
+              duration: d.fastingSession!.targetDuration!, // Cap at target duration
             },
           });
         }
@@ -336,6 +336,17 @@ export class HealthService {
           steps: 0,
           waterIntake: 0,
         },
+        include: {
+          meals: true,
+          waterEntries: true,
+          workouts: {
+            include: {
+              exercises: true,
+              locationPoints: true,
+            },
+          },
+          fastingSession: true,
+        },
       });
     }
 
@@ -353,14 +364,16 @@ export class HealthService {
     });
 
     // Update total calories consumed
-    await this.prisma.dailyHealthData.update({
-      where: { id: dailyData.id },
-      data: {
-        caloriesConsumed: {
-          increment: mealData.calories,
+    if (dailyData) {
+      await this.prisma.dailyHealthData.update({
+        where: { id: dailyData.id },
+        data: {
+          caloriesConsumed: {
+            increment: mealData.calories,
+          },
         },
-      },
-    });
+      });
+    }
 
     return meal;
   }
@@ -452,6 +465,17 @@ export class HealthService {
           steps: 0,
           waterIntake: 0,
         },
+        include: {
+          meals: true,
+          waterEntries: true,
+          workouts: {
+            include: {
+              exercises: true,
+              locationPoints: true,
+            },
+          },
+          fastingSession: true,
+        },
       });
     }
 
@@ -464,14 +488,16 @@ export class HealthService {
     });
 
     // Update total water intake
-    await this.prisma.dailyHealthData.update({
-      where: { id: dailyData.id },
-      data: {
-        waterIntake: {
-          increment: entryData.glasses,
+    if (dailyData) {
+      await this.prisma.dailyHealthData.update({
+        where: { id: dailyData.id },
+        data: {
+          waterIntake: {
+            increment: entryData.glasses,
+          },
         },
-      },
-    });
+      });
+    }
 
     return entry;
   }
@@ -488,6 +514,17 @@ export class HealthService {
           caloriesBurned: 0,
           steps: 0,
           waterIntake: 0,
+        },
+        include: {
+          meals: true,
+          waterEntries: true,
+          workouts: {
+            include: {
+              exercises: true,
+              locationPoints: true,
+            },
+          },
+          fastingSession: true,
         },
       });
     }
@@ -534,14 +571,16 @@ export class HealthService {
     });
 
     // Update daily calories burned
-    await this.prisma.dailyHealthData.update({
-      where: { id: dailyData.id },
-      data: {
-        caloriesBurned: {
-          increment: workoutData.totalCaloriesBurned,
+    if (dailyData) {
+      await this.prisma.dailyHealthData.update({
+        where: { id: dailyData.id },
+        data: {
+          caloriesBurned: {
+            increment: workoutData.totalCaloriesBurned,
+          },
         },
-      },
-    });
+      });
+    }
 
     return workout;
   }
@@ -675,6 +714,17 @@ export class HealthService {
           steps: 0,
           waterIntake: 0,
         },
+        include: {
+          meals: true,
+          waterEntries: true,
+          workouts: {
+            include: {
+              exercises: true,
+              locationPoints: true,
+            },
+          },
+          fastingSession: true,
+        },
       });
     }
 
@@ -707,6 +757,10 @@ export class HealthService {
     const targetDurationValue = sessionData.targetDuration ? Math.round(sessionData.targetDuration) : null;
 
     try {
+      if (!dailyData) {
+        throw new Error('Daily health data not found');
+      }
+      
       const result = await this.prisma.fastingSession.upsert({
         where: { dailyHealthDataId: dailyData.id },
         update: {
