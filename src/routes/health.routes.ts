@@ -10,6 +10,8 @@ import {
   addWorkout,
   updateWorkout,
   deleteWorkout,
+  startFastingSession,
+  endFastingSession,
   saveFastingSession,
   getMealRecommendations,
 } from '../controllers/health.controller';
@@ -42,6 +44,8 @@ router.put('/workouts/:id', updateWorkout);
 router.delete('/workouts/:id', deleteWorkout);
 
 // Fasting sessions
+router.post('/fasting/start', startFastingSession);
+router.post('/fasting/end', endFastingSession);
 router.post('/fasting', saveFastingSession);
 
 export default router;

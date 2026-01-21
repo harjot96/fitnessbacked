@@ -197,6 +197,65 @@ export async function deleteWorkout(req: AuthRequest, res: Response): Promise<Re
   }
 }
 
+export async function startFastingSession(req: AuthRequest, res: Response): Promise<Response> {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Not authenticated', 401, 'AUTH_REQUIRED');
+    }
+
+    const { date, type, targetDuration, eatingWindowStart, eatingWindowEnd } = req.body;
+    
+    if (!date) {
+      return sendError(res, 'Date is required', 400, 'VALIDATION_ERROR');
+    }
+
+    if (!type) {
+      return sendError(res, 'Fasting type is required', 400, 'VALIDATION_ERROR');
+    }
+
+    console.log(`[HealthController] Starting fasting session for user=${req.user.userId}, date=${date}, type=${type}`);
+    
+    const fastingSession = await healthService.startFastingSession(
+      req.user.userId,
+      date,
+      type,
+      targetDuration,
+      eatingWindowStart,
+      eatingWindowEnd
+    );
+    
+    console.log(`[HealthController] Fasting session started: id=${fastingSession.id}`);
+    return sendCreated(res, fastingSession, 'Fasting session started successfully');
+  } catch (error: any) {
+    console.error('[HealthController] Start fasting session error:', error);
+    return sendError(res, error.message || 'Failed to start fasting session', 500);
+  }
+}
+
+export async function endFastingSession(req: AuthRequest, res: Response): Promise<Response> {
+  try {
+    if (!req.user) {
+      return sendError(res, 'Not authenticated', 401, 'AUTH_REQUIRED');
+    }
+
+    const { date } = req.body;
+    
+    if (!date) {
+      return sendError(res, 'Date is required', 400, 'VALIDATION_ERROR');
+    }
+
+    console.log(`[HealthController] Ending fasting session for user=${req.user.userId}, date=${date}`);
+    
+    const fastingSession = await healthService.endFastingSession(req.user.userId, date);
+    
+    console.log(`[HealthController] Fasting session ended: id=${fastingSession.id}`);
+    return sendSuccess(res, fastingSession, 'Fasting session ended successfully');
+  } catch (error: any) {
+    console.error('[HealthController] End fasting session error:', error);
+    return sendError(res, error.message || 'Failed to end fasting session', 500);
+  }
+}
+
 export async function saveFastingSession(req: AuthRequest, res: Response): Promise<Response> {
   try {
     if (!req.user) {

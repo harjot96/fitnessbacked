@@ -696,6 +696,106 @@ export class HealthService {
     return true;
   }
 
+  async startFastingSession(userId: string, date: string, type: string, targetDuration?: number, eatingWindowStart?: number, eatingWindowEnd?: number) {
+    // Get or create daily health data
+    let dailyData = await this.getDailyHealthData(userId, date);
+    
+    if (!dailyData) {
+      dailyData = await this.prisma.dailyHealthData.create({
+        data: {
+          userId,
+          date,
+          caloriesConsumed: 0,
+          caloriesBurned: 0,
+          steps: 0,
+          waterIntake: 0,
+        },
+        include: {
+          meals: true,
+          waterEntries: true,
+          workouts: {
+            include: {
+              exercises: true,
+              locationPoints: true,
+            },
+          },
+          fastingSession: true,
+        },
+      });
+    }
+
+    // Check if there's already an active fasting session
+    if (dailyData.fastingSession && !dailyData.fastingSession.endTime) {
+      throw new Error('An active fasting session already exists. Please end the current session before starting a new one.');
+    }
+
+    const startTime = new Date();
+    const targetDurationValue = targetDuration ? Math.round(targetDuration) : null;
+
+    try {
+      if (!dailyData) {
+        throw new Error('Daily health data not found');
+      }
+      
+      const result = await this.prisma.fastingSession.create({
+        data: {
+          dailyHealthDataId: dailyData.id,
+          type,
+          startTime,
+          endTime: null,
+          duration: 0,
+          targetDuration: targetDurationValue,
+          eatingWindowStart: eatingWindowStart ?? null,
+          eatingWindowEnd: eatingWindowEnd ?? null,
+        },
+      });
+
+      console.log(`[HealthService] Fasting session started: id=${result.id}, type=${result.type}, date=${date}`);
+      return result;
+    } catch (error: any) {
+      console.error(`[HealthService] Error starting fasting session for userId=${userId}, date=${date}:`, error);
+      throw new Error(`Failed to start fasting session: ${error.message}`);
+    }
+  }
+
+  async endFastingSession(userId: string, date: string) {
+    // Get daily health data
+    const dailyData = await this.getDailyHealthData(userId, date);
+    
+    if (!dailyData) {
+      throw new Error('Daily health data not found');
+    }
+
+    if (!dailyData.fastingSession) {
+      throw new Error('No active fasting session found');
+    }
+
+    if (dailyData.fastingSession.endTime) {
+      throw new Error('Fasting session has already ended');
+    }
+
+    const endTime = new Date();
+    const startTime = new Date(dailyData.fastingSession.startTime);
+    const durationHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+    const durationValue = Math.round(durationHours);
+
+    try {
+      const result = await this.prisma.fastingSession.update({
+        where: { id: dailyData.fastingSession.id },
+        data: {
+          endTime,
+          duration: durationValue,
+        },
+      });
+
+      console.log(`[HealthService] Fasting session ended: id=${result.id}, duration=${result.duration} hours, date=${date}`);
+      return result;
+    } catch (error: any) {
+      console.error(`[HealthService] Error ending fasting session for userId=${userId}, date=${date}:`, error);
+      throw new Error(`Failed to end fasting session: ${error.message}`);
+    }
+  }
+
   async saveFastingSession(userId: string, date: string, sessionData: any) {
     // Validate required fields
     if (!sessionData || !sessionData.type || !sessionData.startTime) {

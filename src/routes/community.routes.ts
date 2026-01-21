@@ -26,6 +26,13 @@ import {
   getRingStats,
   updateRingStats,
 } from '../controllers/community.controller';
+import {
+  getFeedPosts,
+  createFeedPost,
+  toggleFeedLike,
+  addFeedComment,
+  getFeedComments,
+} from '../controllers/feed.controller';
 import { requireAuth } from '../auth/middleware';
 
 const router = Router();
@@ -63,6 +70,13 @@ router.get('/notifications', getNotifications);
 router.get('/notifications/unread-count', getUnreadNotificationCount);
 router.put('/notifications/:id/read', markNotificationRead);
 router.put('/notifications/read-all', markAllNotificationsRead);
+
+// Feed
+router.get('/feed', getFeedPosts);
+router.post('/feed', createFeedPost);
+router.post('/feed/:id/like', toggleFeedLike);
+router.get('/feed/:id/comments', getFeedComments);
+router.post('/feed/:id/comments', addFeedComment);
 
 // Ring Stats
 router.get('/ring-stats/:date', getRingStats);

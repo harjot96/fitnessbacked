@@ -32,6 +32,9 @@ model User {
   notifications       Notification[]
   refresh_tokens      refresh_tokens[]
   ringStats           RingStats[]
+  feedPosts           FeedPost[]
+  feedComments        FeedComment[]
+  feedLikes           FeedPostLike[]
   privacy             UserPrivacy?
   profile             UserProfile?
   basketItems         BasketItem[]
@@ -308,6 +311,52 @@ model BlockedUser {
   @@index([blockerUid])
   @@index([blockedUid])
   @@map("blocked_users")
+}
+
+model FeedPost {
+  id            String         @id @default(uuid())
+  userId        String
+  content       String
+  tags          String[]
+  mood          String?
+  visibility    String         @default("public")
+  stats         Json?
+  likesCount    Int            @default(0)
+  commentsCount Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments      FeedComment[]
+  likes         FeedPostLike[]
+
+  @@index([userId, createdAt])
+  @@map("feed_posts")
+}
+
+model FeedComment {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("feed_comments")
+}
+
+model FeedPostLike {
+  id        String   @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+  post      FeedPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([userId])
+  @@map("feed_post_likes")
 }
 
 model RingStats {
