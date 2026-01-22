@@ -33,6 +33,11 @@ import {
   addFeedComment,
   getFeedComments,
 } from '../controllers/feed.controller';
+import {
+  getChallenges,
+  enrollChallenge,
+  updateChallengeProgress,
+} from '../controllers/challenge.controller';
 import { requireAuth } from '../auth/middleware';
 
 const router = Router();
@@ -70,6 +75,11 @@ router.get('/notifications', getNotifications);
 router.get('/notifications/unread-count', getUnreadNotificationCount);
 router.put('/notifications/:id/read', markNotificationRead);
 router.put('/notifications/read-all', markAllNotificationsRead);
+
+// Challenges
+router.get('/challenges', getChallenges);
+router.post('/challenges/:slug/enroll', enrollChallenge);
+router.put('/challenges/:slug/progress', updateChallengeProgress);
 
 // Feed
 router.get('/feed', getFeedPosts);

@@ -46,7 +46,10 @@ export async function getWeeklyHealthData(req: AuthRequest, res: Response): Prom
       return sendError(res, 'startDate query parameter is required', 400, 'VALIDATION_ERROR');
     }
 
-    const data = await healthService.getWeeklyHealthData(req.user.userId, startDate);
+    const days = parseInt(req.query.days as string, 10);
+    const rangeDays = Number.isFinite(days) ? Math.min(Math.max(days, 1), 90) : 7;
+
+    const data = await healthService.getWeeklyHealthData(req.user.userId, startDate, rangeDays);
     return sendSuccess(res, data);
   } catch (error: any) {
     console.error('Get weekly health data error:', error);

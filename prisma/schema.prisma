@@ -35,6 +35,7 @@ model User {
   feedPosts           FeedPost[]
   feedComments        FeedComment[]
   feedLikes           FeedPostLike[]
+  challengeEnrollments ChallengeEnrollment[]
   privacy             UserPrivacy?
   profile             UserProfile?
   basketItems         BasketItem[]
@@ -357,6 +358,39 @@ model FeedPostLike {
   @@unique([postId, userId])
   @@index([userId])
   @@map("feed_post_likes")
+}
+
+model Challenge {
+  id          String                @id @default(uuid())
+  slug        String                @unique
+  title       String
+  description String
+  prizeAmount Int                   @default(0)
+  currency    String                @default("USD")
+  rules       Json?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  enrollments ChallengeEnrollment[]
+
+  @@map("challenges")
+}
+
+model ChallengeEnrollment {
+  id          String    @id @default(uuid())
+  challengeId String
+  userId      String
+  score       Int       @default(0)
+  enrolledAt  DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  challenge   Challenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([challengeId, userId])
+  @@index([challengeId])
+  @@index([userId])
+  @@map("challenge_enrollments")
 }
 
 model RingStats {

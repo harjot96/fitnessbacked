@@ -87,11 +87,12 @@ export class HealthService {
     return data;
   }
 
-  async getWeeklyHealthData(userId: string, startDate: string) {
+  async getWeeklyHealthData(userId: string, startDate: string, days = 7) {
     const dates: string[] = [];
     const start = new Date(startDate);
-    
-    for (let i = 0; i < 7; i++) {
+
+    const rangeDays = Math.max(days, 1);
+    for (let i = 0; i < rangeDays; i++) {
       const date = new Date(start);
       date.setDate(date.getDate() + i);
       dates.push(date.toISOString().split('T')[0]);
@@ -892,4 +893,3 @@ export class HealthService {
     }
   }
 }
-
