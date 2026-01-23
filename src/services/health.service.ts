@@ -1,5 +1,47 @@
 import { PrismaClient } from '@prisma/client';
 
+type RouteEndpoints = {
+  startLatitude: number;
+  startLongitude: number;
+  endLatitude: number;
+  endLongitude: number;
+};
+
+const getRouteEndpoints = (locationPoints?: any[]): RouteEndpoints | null => {
+  if (!Array.isArray(locationPoints) || locationPoints.length === 0) {
+    return null;
+  }
+
+  const normalized = locationPoints
+    .map((point) => ({
+      latitude: Number(point.latitude),
+      longitude: Number(point.longitude),
+      time: point.timestamp ? new Date(point.timestamp).getTime() : Number.NaN,
+    }))
+    .filter((point) => Number.isFinite(point.latitude) && Number.isFinite(point.longitude));
+
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  let start = normalized[0];
+  let end = normalized[normalized.length - 1];
+
+  const withTime = normalized.filter((point) => Number.isFinite(point.time));
+  if (withTime.length > 1) {
+    withTime.sort((a, b) => a.time - b.time);
+    start = withTime[0];
+    end = withTime[withTime.length - 1];
+  }
+
+  return {
+    startLatitude: start.latitude,
+    startLongitude: start.longitude,
+    endLatitude: end.latitude,
+    endLongitude: end.longitude,
+  };
+};
+
 export class HealthService {
   constructor(private prisma: PrismaClient) {}
 
@@ -530,6 +572,8 @@ export class HealthService {
       });
     }
 
+    const routeEndpoints = getRouteEndpoints(workoutData.locationPoints);
+
     const workout = await this.prisma.workout.create({
       data: {
         dailyHealthDataId: dailyData.id,
@@ -542,6 +586,10 @@ export class HealthService {
         distance: workoutData.distance,
         averageSpeed: workoutData.averageSpeed,
         maxSpeed: workoutData.maxSpeed,
+        startLatitude: routeEndpoints?.startLatitude ?? null,
+        startLongitude: routeEndpoints?.startLongitude ?? null,
+        endLatitude: routeEndpoints?.endLatitude ?? null,
+        endLongitude: routeEndpoints?.endLongitude ?? null,
         exercises: {
           create: workoutData.exercises?.map((exercise: any) => ({
             name: exercise.name,
@@ -607,6 +655,8 @@ export class HealthService {
       where: { workoutId },
     });
 
+    const updatedEndpoints = getRouteEndpoints(workoutData.locationPoints);
+
     const updated = await this.prisma.workout.update({
       where: { id: workoutId },
       data: {
@@ -619,6 +669,10 @@ export class HealthService {
         distance: workoutData.distance,
         averageSpeed: workoutData.averageSpeed,
         maxSpeed: workoutData.maxSpeed,
+        startLatitude: updatedEndpoints?.startLatitude ?? null,
+        startLongitude: updatedEndpoints?.startLongitude ?? null,
+        endLatitude: updatedEndpoints?.endLatitude ?? null,
+        endLongitude: updatedEndpoints?.endLongitude ?? null,
         exercises: {
           create: workoutData.exercises?.map((exercise: any) => ({
             name: exercise.name,

@@ -140,6 +140,10 @@ model Workout {
   distance            Float?
   averageSpeed        Float?
   maxSpeed            Float?
+  startLatitude       Float?
+  startLongitude      Float?
+  endLatitude         Float?
+  endLongitude        Float?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
   exercises           Exercise[]
